@@ -1,0 +1,1916 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>Journal2</name>
+    <code>default</code>
+    <version>1.0</version>
+    <author>DigitalAtelier</author>
+    <link>http://journal.digital-atelier.com</link>
+
+    <!-- oc3 -->
+    <file path="system/library/template/twig.php">
+        <operation>
+            <search><![CDATA[$this->twig = new \Twig_Environment($loader, array(]]></search>
+            <add position="after" offset="3"><![CDATA[
+                $this->twig->addFunction('staticCall', new \Twig_Function_Function(function ($class, $function, $args = array()) {
+                    if (class_exists($class) && method_exists($class, $function)) {
+                        return call_user_func_array(array($class, $function), $args);
+                    }
+
+                    return null;
+                }));
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="system/library/template/twig.php">
+        <operation>
+            <search><![CDATA[$this->twig = new \Twig_Environment($loader, $config);]]></search>
+            <add position="after"><![CDATA[
+                $this->twig->addFunction('staticCall', new \Twig_Function_Function(function ($class, $function, $args = array()) {
+                    if (class_exists($class) && method_exists($class, $function)) {
+                        return call_user_func_array(array($class, $function), $args);
+                    }
+
+                    return null;
+                }));
+            ]]></add>
+        </operation>
+    </file>
+
+
+    <!--
+
+        Loader fix for accessing journal2 object from $this
+
+    -->
+
+    <file path="system/engine/loader.php">
+        <operation>
+            <search><![CDATA[public function __construct($registry) {]]></search>
+            <add position="before">
+                /* Journal2 modification */
+                public function __get($key) {
+                    return $this->registry->get($key);
+                }
+
+                public function __set($key, $value) {
+                    $this->registry->set($key, $value);
+                }
+                /* End of Journal2 modification */
+            </add>
+        </operation>
+    </file>
+
+    <!--
+
+    Loader fix for accessing journal2 object from $this
+
+-->
+
+    <file path="system/library/template/basic.php">
+        <operation>
+            <search><![CDATA[public function set($key, $value) {]]></search>
+            <add position="before">
+                /* Journal2 modification */
+                public function __get($key) {
+                    global $registry;
+                    return $registry->get($key);
+                }
+
+                public function __set($key, $value) {
+                    global $registry;
+                    $registry->set($key, $value);
+                }
+                /* End of Journal2 modification */
+            </add>
+        </operation>
+    </file>
+
+    <!--
+
+        Admin Shortcut menu
+
+    -->
+
+    <file path="admin/controller/common/menu.php">
+        <operation>
+            <search><![CDATA[$this->load->language('common/menu');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('setting/extension');
+                $extensions = $this->model_setting_extension->getInstalled('module');
+                if (in_array('journal2', $extensions)) {
+                    if (version_compare(VERSION, '2.2', '>=')) {
+                        $data['journal2'] = $this->url->link('module/journal2', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), true);
+                        $data['journal2_clear_cache'] = $this->url->link('module/journal2/clear_cache', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), true);
+                    } else {
+                        $data['journal2'] = $this->url->link('module/journal2', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), 'SSL');
+                        $data['journal2_clear_cache'] = $this->url->link('module/journal2/clear_cache', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), 'SSL');
+                    }
+                    $this->session->data['j2_redirect'] = isset($this->request->get['route']) ? $this->request->get['route'] : null;
+                } else {
+                    $data['journal2'] = '';
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/common/menu.tpl">
+        <operation>
+            <search><![CDATA[<li><a class="parent"><?php echo $text_marketing; ?></a>]]></search>
+            <add position="after" offset="8"><![CDATA[
+                <?php if (isset($journal2) && $journal2): ?>
+                <li id="journal2-menu"><a class="parent" href="<?php echo $journal2; ?>"><img class="fa fw" style="margin-left: 4px; padding-right: 6px; margin-top:-3px;" src="view/journal2/css/icons/j.png" alt=""/><span>Journal</span></a>
+                    <ul>
+                        <li><a href="<?php echo $journal2; ?>">Dashboard</a></li>
+                        <li><a href="<?php echo $journal2_clear_cache; ?>">Clear Cache</a></li>
+                    </ul>
+                </li>
+                <?php endif; ?>
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Admin Shortcut menu oc 23 fix
+
+    -->
+
+    <file path="admin/controller/common/column_left.php">
+        <operation>
+            <search><![CDATA[$this->load->language('common/column_left');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('setting/extension');
+                $extensions = $this->model_setting_extension->getInstalled('module');
+                if (in_array('journal2', $extensions) && $this->user->hasPermission('access', 'module/journal2')) {
+                    if (version_compare(VERSION, '2.2', '>=')) {
+                        $data['journal2'] = $this->url->link('module/journal2', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), true);
+                        $data['journal2_clear_cache'] = $this->url->link('module/journal2/clear_cache', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), true);
+                    } else {
+                        $data['journal2'] = $this->url->link('module/journal2', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), 'SSL');
+                        $data['journal2_clear_cache'] = $this->url->link('module/journal2/clear_cache', version_compare(VERSION, '3', '>=') ? ('user_token=' . $this->session->data['user_token']) : ('token=' . $this->session->data['token']), 'SSL');
+                    }
+                    $this->session->data['j2_redirect'] = isset($this->request->get['route']) ? $this->request->get['route'] : null;
+                } else {
+                    $data['journal2'] = '';
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/common/column_left.tpl">
+        <operation>
+            <search><![CDATA[<div id="stats">]]></search>
+            <add position="before" offset="1"><![CDATA[
+                <?php if (isset($journal2) && $journal2): ?>
+                <li id="journal2-menu"><a class="parent" href="<?php echo $journal2; ?>"><img class="fa fw" style="margin-left: 4px; padding-right: 6px; margin-top:-3px;" src="view/journal2/css/icons/j.png" alt=""/><span>Journal</span></a>
+                    <ul>
+                        <li><a href="<?php echo $journal2; ?>">Dashboard</a></li>
+                        <li><a href="<?php echo $journal2_clear_cache; ?>">Clear Cache</a></li>
+                    </ul>
+                </li>
+                <?php endif; ?>
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/common/column_left.twig">
+        <operation>
+            <search><![CDATA[<div id="stats">]]></search>
+            <add position="before" offset="1"><![CDATA[
+            {% if journal2 %}
+                <li id="journal2-menu"><a class="parent" href="{{ journal2 }}"><img class="fa fw" style="margin-left: 4px; padding-right: 6px; margin-top:-3px;" src="view/journal2/css/icons/j.png" alt=""/><span>Journal</span></a>
+                    <ul>
+                        <li><a href="{{ journal2 }}">Dashboard</a></li>
+                        <li><a href="{{ journal2_clear_cache }}">Clear Cache</a></li>
+                    </ul>
+                </li>
+            {% endif %}
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Include Journal Newsletter subscribers when sending emails
+
+    -->
+
+    <file path="admin/controller/marketing/contact.php">
+        <operation error="skip">
+            <search><![CDATA[$this->load->model('sale/customer');]]></search>
+            <add position="after"><![CDATA[$this->load->model('journal2/newsletter');]]></add>
+        </operation>
+
+        <operation error="skip">
+            <search index="0"><![CDATA[$email_total = $this->model_sale_customer->getTotalCustomers($customer_data);]]></search>
+            <add position="replace"><![CDATA[$email_total = $this->model_journal2_newsletter->getTotalSubscribers();]]></add>
+        </operation>
+
+        <operation error="skip">
+            <search index="0"><![CDATA[$results = $this->model_sale_customer->getCustomers($customer_data);]]></search>
+            <add position="replace"><![CDATA[$results = $this->model_journal2_newsletter->getSubscribers($customer_data);]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/marketing/contact.php">
+        <operation error="skip">
+            <search><![CDATA[$this->load->model('customer/customer');]]></search>
+            <add position="after"><![CDATA[$this->load->model('journal2/newsletter');]]></add>
+        </operation>
+
+        <operation error="skip">
+            <search index="0"><![CDATA[$email_total = $this->model_customer_customer->getTotalCustomers($customer_data);]]></search>
+            <add position="replace"><![CDATA[$email_total = $this->model_journal2_newsletter->getTotalSubscribers();]]></add>
+        </operation>
+
+        <operation error="skip">
+            <search index="0"><![CDATA[$results = $this->model_customer_customer->getCustomers($customer_data);]]></search>
+            <add position="replace"><![CDATA[$results = $this->model_journal2_newsletter->getSubscribers($customer_data);]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Backup / Restore fix
+
+    -->
+
+    <file path="admin/controller/tool/backup.php">
+        <operation>
+            <search><![CDATA[$this->error['warning'] = $this->language->get('error_empty');]]></search>
+            <add position="replace"><![CDATA[
+            $err_code = isset($this->request->files['import']['error']) ? $this->request->files['import']['error'] : null;
+            if ($err_code !== null) {
+                $this->error['warning'] = $this->language->get('error_upload_' . $this->request->files['import']['error']);
+                if ($err_code == '1' || $err_code == '2') {
+                    $this->error['warning'] .= '<br />You can find more information <a href="http://stackoverflow.com/a/2184541" target="_blank">here</a> or contact your hosting provider.';
+                }
+            } else {
+                $this->error['warning'] = $this->language->get('error_empty');
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/tool/backup.php">
+        <operation>
+            <search><![CDATA[public function index() {]]></search>
+            <add position="after"><![CDATA[
+                $data['max_upload_limit']  = '<p style="margin-top: 15px;">php.ini path: <b>' . php_ini_loaded_file() . '</b></p>';
+                $data['max_upload_limit'] .= '<p>upload_max_filesize: <b>' . ini_get('upload_max_filesize') .  '</b></p>';
+                $data['max_upload_limit'] .= '<p>post_max_size: <b>' . ini_get('post_max_size') .  '</b></p>';
+                $data['max_upload_limit'] .= '<p><a href="http://stackoverflow.com/a/2184541" target="_blank">How to increase them</a></p>';
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/tool/backup.php">
+        <operation>
+            <search><![CDATA[$this->db->query(substr($sql, 0, strlen($sql) -2));]]></search>
+            <add position="replace"><![CDATA[
+                $sql = str_replace('`oc_', '`' . DB_PREFIX, $sql);
+                $this->db->query(substr($sql, 0, strlen($sql) -2));
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/tool/backup.php">
+        <operation>
+            <search><![CDATA[if (substr($line, 0, 14) == 'TRUNCATE TABLE' || substr($line, 0, 11) == 'INSERT INTO') {]]></search>
+            <add position="replace"><![CDATA[if (substr($line, 0, 14) == 'TRUNCATE TABLE' || substr($line, 0, 11) == 'INSERT INTO' || substr($line, 0, 11) == 'DELETE FROM' || substr($line, 0, 11) == 'ALTER TABLE') {]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/tool/backup.tpl">
+        <operation>
+            <search><![CDATA[<input type="file" name="import" id="input-import" />]]></search>
+            <add position="replace"><![CDATA[<input type="file" name="import" id="input-import" /><?php echo $max_upload_limit; ?>]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/tool/backup.twig">
+        <operation>
+            <search><![CDATA[<div class="tab-pane" id="tab-restore">]]></search>
+            <add position="after"><![CDATA[
+                <div class="col-sm-10 col-sm-offset-2">
+                    {{ max_upload_limit|join(' ') }}
+                </div>
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/model/tool/backup.php">
+        <operation>
+            <search><![CDATA[$values .= '\'' . $value . '\', ';]]></search>
+            <add position="before"><![CDATA[
+                /* json fix */
+                if (in_array($table, array(
+                    DB_PREFIX . 'journal2_config',
+                    DB_PREFIX . 'journal2_modules',
+                    DB_PREFIX . 'journal2_newsletter',
+                    DB_PREFIX . 'journal2_settings',
+                    DB_PREFIX . 'journal2_skins',
+                ))) {
+                    $value = str_replace('\n', '\\\n', $value);
+                    $value = str_replace('\t', '\\\t', $value);
+                }
+                /* end json fix */
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[$output .= 'TRUNCATE TABLE `' . $table . '`;' . "\n\n";]]></search>
+            <add position="after"><![CDATA[
+                /* journal skins fix */
+                if ($table === DB_PREFIX . 'journal2_skins') {
+                    $output .= "ALTER TABLE `" . $table . "` AUTO_INCREMENT = 100;" . "\n\n";
+                }
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[$sql = trim($sql);]]></search>
+            <add position="after"><![CDATA[
+            if (strpos($sql, '-- EXPORT FOR') === 0) {
+                $version = (int)str_replace('-- EXPORT FOR: ', '', $sql);
+                if (version_compare(VERSION, '2', '>=') && $version !== 2) {
+                    die('Version mismatch: You have OpenCart 2.x but the imported file is for OpenCart 1.5.x, go back and export the correct setup.');
+                }
+                if (!version_compare(VERSION, '2', '>=') && $version !== 1) {
+                    die('Version mismatch: You have OpenCart 1.5.x but the imported file is for OpenCart 2.x, go back and export the correct setup.');
+                }
+            }
+
+            $sql = str_replace('`oc_', '`' . DB_PREFIX, $sql);
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Improve header & footer performance
+
+    -->
+
+    <file path="catalog/controller/common/header.php">
+        <operation>
+            <search><![CDATA[$categories = $this->model_catalog_category->getCategories(0);]]></search>
+            <add position="replace" trim="true"><![CDATA[$categories = strpos($this->config->get('config_template'), 'journal2') === 0 ? array() : $this->model_catalog_category->getCategories(0);]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/footer.php">
+        <operation>
+            <search><![CDATA[foreach ($this->model_catalog_information->getInformations() as $result) {]]></search>
+            <add position="replace" trim="true"><![CDATA[foreach (strpos($this->config->get('config_template'), 'journal2') === 0 ? array() : $this->model_catalog_information->getInformations() as $result) {]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Html Minifier
+
+    -->
+
+    <file path="system/library/response.php">
+        <operation>
+            <search><![CDATA[if ($this->output) {]]></search>
+            <add position="after"><![CDATA[
+                if (defined('JOURNAL_INSTALLED')) {
+                    global $registry;
+                    $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+                    $is_get = !empty($_SERVER['REQUEST_METHOD']) && strtolower($_SERVER['REQUEST_METHOD']) === 'get';
+                    $ignored_routes = array(
+                        'journal2/assets/css',
+                        'journal2/assets/js',
+                        'feed/google_sitemap',
+                        'feed/google_product_feed'
+                    );
+                    $request = $registry->get('request');
+                    $current_route = isset($request->get['route']) ? $request->get['route'] : null;
+                    $ignored_route = $current_route !== null && in_array($current_route, $ignored_routes);
+                    $journal2 = $registry->get('journal2');
+                    if (!$ignored_route && !$is_ajax && $is_get && !$journal2->settings->get('config_system_settings.developer_mode') && $journal2->settings->get('config_system_settings.minify_html')) {
+                        try {
+							$this->output = Minify_HTML::minify($this->output, array(
+                            'xhtml' => false,
+                            'jsMinifier' => 'j2_js_minify'
+                        ));
+						} catch (Exception $e) { }
+
+                        if (Journal2Cache::$page_cache_file) {
+                            file_put_contents(Journal2Cache::$page_cache_file, $this->output);
+                        }
+                    }
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Serve images from other url
+
+    -->
+
+    <file path="catalog/model/tool/image.php">
+        <operation>
+            <search><![CDATA[return $this->config->get('config_ssl') . 'image/' . $new_image;]]></search>
+            <add position="replace"><![CDATA[return (defined('HTTPS_STATIC_CDN') ? HTTPS_STATIC_CDN : $this->config->get('config_ssl')) . 'image/' . $new_image;]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[return $this->config->get('config_url') . 'image/' . $new_image;]]></search>
+            <add position="replace"><![CDATA[return (defined('HTTP_STATIC_CDN') ? HTTP_STATIC_CDN : $this->config->get('config_url')) . 'image/' . $new_image;]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/model/tool/image.php">
+        <operation>
+            <search><![CDATA[return $this->config->get('config_ssl') . 'image/' . $image_new;]]></search>
+            <add position="replace"><![CDATA[return (defined('HTTPS_STATIC_CDN') ? HTTPS_STATIC_CDN : $this->config->get('config_ssl')) . 'image/' . $image_new;]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[return $this->config->get('config_url') . 'image/' . $image_new;]]></search>
+            <add position="replace"><![CDATA[return (defined('HTTP_STATIC_CDN') ? HTTP_STATIC_CDN : $this->config->get('config_url')) . 'image/' . $image_new;]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Fix crop image
+
+    -->
+
+    <file path="catalog/model/tool/image.php">
+        <operation>
+            <search><![CDATA[public function resize($filename, $width, $height) {]]></search>
+            <add position="replace"><![CDATA[public function resize($filename, $width, $height, $type = '') {]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[(int)$height]]></search>
+            <add position="replace"><![CDATA[(int)$height . $type]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$image->resize($width, $height);]]></search>
+            <add position="replace"><![CDATA[$image->resize($width, $height, $type);]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Journal2 modules tweak
+
+    -->
+
+    <file path="admin/model/extension/module.php">
+        <operation>
+            <search><![CDATA[$this->db->query("DELETE FROM `" . DB_PREFIX . "layout_module` WHERE `code` LIKE '%." . (int)$module_id . "'");]]></search>
+            <add position="replace"><![CDATA[$this->db->query("DELETE FROM `" . DB_PREFIX . "layout_module` WHERE `code` LIKE '%." . (int)$module_id . "' AND `code` NOT LIKE 'journal2_%'");]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[public function deleteModulesByCode($code) {]]></search>
+            <add position="after"><![CDATA[
+            if (strpos($code, 'journal2_') === 0) {
+                return;
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/model/design/layout.php">
+        <operation error="skip">
+            <search><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "'");]]></search>
+            <add position="replace"><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "' AND `code` NOT LIKE 'journal2_%'");]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/model/design/layout.php">
+        <operation error="skip">
+            <search><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "' ORDER BY position ASC, sort_order ASC");]]></search>
+            <add position="replace"><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "' AND `code` NOT LIKE 'journal2_%' ORDER BY position ASC, sort_order ASC");]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/model/design/layout.php">
+        <operation>
+            <search index="0"><![CDATA[$this->db->query("DELETE FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "'");]]></search>
+            <add position="replace"><![CDATA[$this->db->query("DELETE FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "' AND `code` NOT LIKE 'journal2_%'");]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/content_top.php">
+        <operation>
+            <search><![CDATA[$part = explode('.', $module['code']);]]></search>
+            <add position="after"><![CDATA[
+            if (strpos($module['code'], 'journal2_') === 0) {
+                if ($this->config->get($part[0] . '_' . $module['layout_module_id'] . '_status')) {
+                    $action = $this->load->controller('module/' . $part[0], array(
+                        'position'  => $module['position'],
+                        'layout_id' => $layout_id,
+                        'module_id' => $part[1]
+                    ));
+                    if ($action) {
+                        $data['modules'][] = $action;
+                    }
+                }
+                continue;
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/content_bottom.php">
+        <operation>
+            <search><![CDATA[$part = explode('.', $module['code']);]]></search>
+            <add position="after"><![CDATA[
+            if (strpos($module['code'], 'journal2_') === 0) {
+                if ($this->config->get($part[0] . '_' . $module['layout_module_id'] . '_status')) {
+                    $action = $this->load->controller('module/' . $part[0], array(
+                        'position'  => $module['position'],
+                        'layout_id' => $layout_id,
+                        'module_id' => $part[1]
+                    ));
+                    if ($action) {
+                        $data['modules'][] = $action;
+                    }
+                }
+                continue;
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/column_left.php">
+        <operation>
+            <search><![CDATA[$part = explode('.', $module['code']);]]></search>
+            <add position="after"><![CDATA[
+            if (strpos($module['code'], 'journal2_') === 0) {
+                if ($this->config->get($part[0] . '_' . $module['layout_module_id'] . '_status')) {
+                    $action = $this->load->controller('module/' . $part[0], array(
+                        'position'  => $module['position'],
+                        'layout_id' => $layout_id,
+                        'module_id' => $part[1]
+                    ));
+                    if ($action) {
+                        $data['modules'][] = $action;
+                    }
+                }
+                continue;
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/column_right.php">
+        <operation>
+            <search><![CDATA[$part = explode('.', $module['code']);]]></search>
+            <add position="after"><![CDATA[
+            if (strpos($module['code'], 'journal2_') === 0) {
+                if ($this->config->get($part[0] . '_' . $module['layout_module_id'] . '_status')) {
+                    $action = $this->load->controller('module/' . $part[0], array(
+                        'position'  => $module['position'],
+                        'layout_id' => $layout_id,
+                        'module_id' => $part[1]
+                    ));
+                    if ($action) {
+                        $data['modules'][] = $action;
+                    }
+                }
+                continue;
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/model/design/layout.php">
+        <operation>
+            <search><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_route WHERE '" . $this->db->escape($route) . "' LIKE route AND store_id = '" . (int)$this->config->get('config_store_id') . "' ORDER BY route DESC LIMIT 1");]]></search>
+            <add position="replace"><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_route WHERE '" . $this->db->escape($route) . "' LIKE CONCAT(route, '%') AND store_id = '" . (int)$this->config->get('config_store_id') . "' ORDER BY route DESC LIMIT 1");]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_module WHERE layout_id = '" . (int)$layout_id . "' AND position = '" . $this->db->escape($position) . "' ORDER BY sort_order");]]></search>
+            <add position="replace"><![CDATA[$query = $this->db->query("SELECT * FROM " . DB_PREFIX . "layout_module WHERE (layout_id = -1 OR layout_id = '" . (int)$layout_id . "') AND position = '" . $this->db->escape($position) . "' ORDER BY sort_order");]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Special Countdown
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[if ((float)$product_info['special']) {]]></search>
+            <add position="after"><![CDATA[
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $this->journal2->settings->get('show_countdown_product_page', 'on') == 'on') {
+                    $this->load->model('journal2/product');
+                    $date_end = $this->model_journal2_product->getSpecialCountdown($this->request->get['product_id']);
+                    if ($date_end === '0000-00-00') {
+                        $date_end = false;
+                    }
+                    $data['date_end'] = $date_end;
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $date_end = false;
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $special && $this->journal2->settings->get('show_countdown', 'never') !== 'never') {
+                    $this->load->model('journal2/product');
+                    $date_end = $this->model_journal2_product->getSpecialCountdown($result['product_id']);
+                    if ($date_end === '0000-00-00') {
+                        $date_end = false;
+                    }
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['special'     => $special,]]></search>
+            <add position="after"><![CDATA[
+                'date_end'       => $date_end,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/category.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $date_end = false;
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $special && $this->journal2->settings->get('show_countdown', 'never') !== 'never') {
+                    $this->load->model('journal2/product');
+                    $date_end = $this->model_journal2_product->getSpecialCountdown($result['product_id']);
+                    if ($date_end === '0000-00-00') {
+                        $date_end = false;
+                    }
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['special'     => $special,]]></search>
+            <add position="after"><![CDATA[
+                'date_end'       => $date_end,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/manufacturer.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $date_end = false;
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $special && $this->journal2->settings->get('show_countdown', 'never') !== 'never') {
+                    $this->load->model('journal2/product');
+                    $date_end = $this->model_journal2_product->getSpecialCountdown($result['product_id']);
+                    if ($date_end === '0000-00-00') {
+                        $date_end = false;
+                    }
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['special'     => $special,]]></search>
+            <add position="after"><![CDATA[
+                'date_end'       => $date_end,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/search.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $date_end = false;
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $special && $this->journal2->settings->get('show_countdown', 'never') !== 'never') {
+                    $this->load->model('journal2/product');
+                    $date_end = $this->model_journal2_product->getSpecialCountdown($result['product_id']);
+                    if ($date_end === '0000-00-00') {
+                        $date_end = false;
+                    }
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['special'     => $special,]]></search>
+            <add position="after"><![CDATA[
+                'date_end'       => $date_end,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/special.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $date_end = false;
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $special && $this->journal2->settings->get('show_countdown', 'never') !== 'never') {
+                    $this->load->model('journal2/product');
+                    $date_end = $this->model_journal2_product->getSpecialCountdown($result['product_id']);
+                    if ($date_end === '0000-00-00') {
+                        $date_end = false;
+                    }
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['special'     => $special,]]></search>
+            <add position="after"><![CDATA[
+                'date_end'       => $date_end,
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Notification Image
+
+    -->
+
+    <file path="catalog/controller/checkout/cart.php">
+        <operation>
+            <search><![CDATA[$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('checkout/cart'));]]></search>
+            <add position="before"><![CDATA[
+                if (strpos($this->config->get('config_template'), 'journal2') === 0) {
+                    $this->load->model('tool/image');
+                    $json['image'] = Journal2Utils::resizeImage($this->model_tool_image, $product_info['image'], $this->config->get('config_image_cart_width'), $this->config->get('config_image_cart_height'));
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/account/wishlist.php">
+        <operation>
+            <search><![CDATA[$json['total'] = sprintf($this->language->get('text_wishlist'), (isset($this->session->data['wishlist']) ? count($this->session->data['wishlist']) : 0));]]></search>
+            <add position="before"><![CDATA[
+                if (strpos($this->config->get('config_template'), 'journal2') === 0) {
+                    $this->load->model('tool/image');
+                    $json['image'] = Journal2Utils::resizeImage($this->model_tool_image, $product_info['image'], $this->config->get('config_image_cart_width'), $this->config->get('config_image_cart_height'));
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/account/wishlist.php">
+        <operation>
+            <search><![CDATA[$json['total'] = sprintf($this->language->get('text_wishlist'), $this->model_account_wishlist->getTotalWishlist());]]></search>
+            <add position="before"><![CDATA[
+                if (strpos($this->config->get('config_template'), 'journal2') === 0) {
+                    $this->load->model('tool/image');
+                    $json['image'] = Journal2Utils::resizeImage($this->model_tool_image, $product_info['image'], $this->config->get('config_image_cart_width'), $this->config->get('config_image_cart_height'));
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/compare.php">
+        <operation>
+            <search><![CDATA[$json['success'] = sprintf($this->language->get('text_success'), $this->url->link('product/product', 'product_id=' . $this->request->post['product_id']), $product_info['name'], $this->url->link('product/compare'));]]></search>
+            <add position="before"><![CDATA[
+                if (strpos($this->config->get('config_template'), 'journal2') === 0) {
+                    $this->load->model('tool/image');
+                    $json['image'] = Journal2Utils::resizeImage($this->model_tool_image, $product_info['image'], $this->config->get('config_image_cart_width'), $this->config->get('config_image_cart_height'));
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        No Image Cart fix
+
+    -->
+
+    <file path="catalog/controller/common/cart.php">
+        <operation>
+            <search><![CDATA[$image = '';]]></search>
+            <add position="replace"><![CDATA[$image = $this->model_tool_image->resize('no_image.png', $this->config->get('config_image_cart_width'), $this->config->get('config_image_cart_height'));]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/checkout/cart.php">
+        <operation>
+            <search><![CDATA[$image = '';]]></search>
+            <add position="replace"><![CDATA[$image = $this->model_tool_image->resize('no_image.png', $this->config->get('config_image_cart_width'), $this->config->get('config_image_cart_height'));]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        No Image Product Page fix
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$data['popup'] = '';]]></search>
+            <add position="replace"><![CDATA[$data['popup'] = $this->model_tool_image->resize('no_image.png', $this->config->get('config_image_popup_width'), $this->config->get('config_image_popup_height'));]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$data['thumb'] = '';]]></search>
+            <add position="replace"><![CDATA[$data['thumb'] = $this->model_tool_image->resize('no_image.png', $this->config->get('config_image_thumb_width'), $this->config->get('config_image_thumb_height'));]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Brand enhancements Product Page
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$data['manufacturer'] = $product_info['manufacturer'];]]></search>
+            <add position="after"><![CDATA[
+			if (strpos($this->config->get('config_template'), 'journal2') === 0) {
+			    $this->load->model('catalog/manufacturer');
+			    $data['text_manufacturer'] = $this->language->get('text_manufacturer');
+                $manufacturer_info = $this->model_catalog_manufacturer->getManufacturer($product_info['manufacturer_id']);
+                if ($manufacturer_info && $manufacturer_info['image'] && $this->journal2->settings->get('manufacturer_image', '0') == '1') {
+                    $this->journal2->settings->set('manufacturer_image', 'on');
+                    $data['manufacturer_image_width'] = $this->journal2->settings->get('manufacturer_image_width', 100);
+                    $data['manufacturer_image_height'] = $this->journal2->settings->get('manufacturer_image_height', 100);
+                    $data['manufacturer_image'] = Journal2Utils::resizeImage($this->model_tool_image, $manufacturer_info['image'], $data['manufacturer_image_width'], $data['manufacturer_image_height']);
+                    switch ($this->journal2->settings->get('manufacturer_image_additional_text', 'none')) {
+                        case 'brand':
+                            $data['manufacturer_image_name'] = $product_info['manufacturer'];
+                            break;
+                        case 'custom':
+                            $data['manufacturer_image_name'] = $this->journal2->settings->get('manufacturer_image_custom_text');
+                            break;
+                    }
+                }
+			}
+            ]]></add>
+        </operation>
+    </file>
+
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$this->model_tool_image->resize($option_value['image'], 50, 50),]]></search>
+            <add position="replace"><![CDATA[strpos($this->config->get('config_template'), 'journal2') === 0 && $option_value['image'] && is_file(DIR_IMAGE . $option_value['image']) ? Journal2Utils::resizeImage($this->model_tool_image, $option_value['image'], $this->journal2->settings->get('product_page_options_push_image_width', 30), $this->journal2->settings->get('product_page_options_push_image_height', 30), 'crop') : $this->model_tool_image->resize($option_value['image'], 50, 50),]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Product Gallery first image fix
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$data['popup'] = $this->model_tool_image->resize($product_info['image'], $this->config->get('config_image_popup_width'), $this->config->get('config_image_popup_height'));]]></search>
+            <add position="before"><![CDATA[$data['popup_fixed'] = $this->model_tool_image->resize($product_info['image'], $this->config->get('config_image_popup_width'), $this->config->get('config_image_popup_height'));]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$data['thumb'] = $this->model_tool_image->resize($product_info['image'], $this->config->get('config_image_thumb_width'), $this->config->get('config_image_thumb_height'));]]></search>
+            <add position="before"><![CDATA[$data['thumb_fixed'] = $this->model_tool_image->resize($product_info['image'], $this->config->get('config_image_additional_width'), $this->config->get('config_image_additional_height'));]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Product Gallery first image fix - OC 2.2
+
+    -->
+
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$data['popup'] = $this->model_tool_image->resize($product_info['image'], $this->config->get($this->config->get('config_theme') . '_image_popup_width'), $this->config->get($this->config->get('config_theme') . '_image_popup_height'));]]></search>
+            <add position="before"><![CDATA[$data['popup_fixed'] = $this->model_tool_image->resize($product_info['image'], $this->config->get($this->config->get('config_theme') . '_image_popup_width'), $this->config->get($this->config->get('config_theme') . '_image_popup_height'));]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$data['thumb'] = $this->model_tool_image->resize($product_info['image'], $this->config->get($this->config->get('config_theme') . '_image_thumb_width'), $this->config->get($this->config->get('config_theme') . '_image_thumb_height'));]]></search>
+            <add position="before"><![CDATA[$data['thumb_fixed'] = $this->model_tool_image->resize($product_info['image'], $this->config->get($this->config->get('config_theme') . '_image_additional_width'), $this->config->get($this->config->get('config_theme') . '_image_additional_height'));]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Product Gallery Original Image
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$data['popup'] = $this->model_tool_image->resize($product_info['image'], $this->config->get($this->config->get('config_theme') . '_image_popup_width'), $this->config->get($this->config->get('config_theme') . '_image_popup_height'));]]></search>
+            <add position="before"><![CDATA[$data['original'] = strpos($this->config->get('config_template'), 'journal2') === 0 ? Journal2Utils::resizeImage($this->model_tool_image, $product_info['image']) : '';]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$data['images'][] = array(]]></search>
+            <add position="after"><![CDATA['original' => strpos($this->config->get('config_template'), 'journal2') === 0 ? Journal2Utils::resizeImage($this->model_tool_image, $result['image']) : '',]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Product Labels
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search index="0"><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[if ($product_info['quantity'] <= 0) {]]></search>
+            <add position="before"><![CDATA[
+                if (true && $product_info['quantity'] <= 0) {
+                    $data['stock_status'] = 'outofstock';
+                }
+                if (true && $product_info['quantity'] > 0) {
+                    $data['stock_status'] = 'instock';
+                }
+                $data['labels'] = $this->model_journal2_product->getLabels($product_info['product_id']);
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/compare.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'        => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($product_info['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/account/wishlist.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'      => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($product_info['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/category.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/manufacturer.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/search.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/special.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/bestseller.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/latest.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/special.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($result['product_id']),
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/featured.php">
+        <operation>
+            <search><![CDATA[$this->load->model('catalog/product');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/product');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'labels'        => $this->model_journal2_product->getLabels($product_id),
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Product Second Image
+
+    -->
+
+    <file path="catalog/controller/product/product.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/category.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/manufacturer.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/search.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/product/special.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/bestseller.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/latest.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/special.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($result['product_id']);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/{controller/module,controller/extension/module}/featured.php">
+        <operation>
+            <search><![CDATA[$data['products'][] = array(]]></search>
+            <add position="before"><![CDATA[
+                $additional_images = $this->model_catalog_product->getProductImages($product_id);
+
+                $image2 = false;
+
+                if (count($additional_images) > 0) {
+                    $image2 = $this->model_tool_image->resize($additional_images[0]['image'], $this->config->get('config_image_product_width'), $this->config->get('config_image_product_height'));
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA['thumb'       => $image,]]></search>
+            <add position="after"><![CDATA[
+                'thumb2'       => $image2,
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Journal Blog
+
+    -->
+
+    <file path="catalog/controller/{feed,extension/feed}/google_sitemap.php">
+        <operation>
+            <search><![CDATA[$output .= '</urlset>';]]></search>
+            <add position="before"><![CDATA[
+            $this->load->model('journal2/blog');
+
+			foreach ($this->model_journal2_blog->getPosts() as $post) {
+                $output .= '<url>';
+                $output .= '<loc>' . $this->url->link('journal2/blog/post', 'journal_blog_post_id=' . $post['post_id']) . '</loc>';
+                $output .= '<changefreq>weekly</changefreq>';
+                $output .= '<priority>1</priority>';
+                $output .= '</url>';
+            }
+
+			foreach ($this->model_journal2_blog->getCategories() as $category) {
+				$output .= '<url>';
+				$output .= '<loc>' . $this->url->link('journal2/blog', 'journal_blog_category_id=' . $category['category_id']) . '</loc>';
+				$output .= '<changefreq>weekly</changefreq>';
+				$output .= '<priority>1</priority>';
+				$output .= '</url>';
+			}
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/seo_url.php">
+        <operation>
+            <search><![CDATA[if ($query->num_rows) {]]></search>
+            <add position="before"><![CDATA[
+                if ($part && !$query->num_rows) {
+                    $sql = "
+                        SELECT CONCAT('journal_blog_category_id=', category_id) as query FROM " . DB_PREFIX . "journal2_blog_category_description
+                        WHERE keyword = '" . $this->db->escape($part) . "'
+                        UNION
+                        SELECT CONCAT('journal_blog_post_id=', post_id) as query FROM " . DB_PREFIX . "journal2_blog_post_description
+                        WHERE keyword = '" . $this->db->escape($part) . "'
+                    ";
+                    $query = $this->db->query($sql);
+                }
+
+                if (!$query->num_rows) {
+                    $this->load->model('journal2/blog');
+                    $journal_blog_keywords = $this->model_journal2_blog->getBlogKeywords();
+
+                    if($part && is_array($journal_blog_keywords) && (in_array($part, $journal_blog_keywords))) {
+                        $this->request->get['route'] = 'journal2/blog';
+                        continue;
+                    }
+                }
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[if ($url[0] == 'product_id') {]]></search>
+            <add position="before"><![CDATA[
+                    if ($url[0] == 'journal_blog_post_id') {
+                        $this->request->get['journal_blog_post_id'] = $url[1];
+                    }
+
+                    if ($url[0] == 'journal_blog_category_id') {
+                        $this->request->get['journal_blog_category_id'] = $url[1];
+                    }
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[if (!isset($this->request->get['route'])) {]]></search>
+            <add position="before"><![CDATA[
+                    if (isset($this->request->get['journal_blog_post_id'])) {
+                        $this->request->get['route'] = 'journal2/blog/post';
+			        } else if (isset($this->request->get['journal_blog_category_id'])) {
+                        $this->request->get['route'] = 'journal2/blog';
+                    }
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[public function rewrite($link) {]]></search>
+            <add position="after"><![CDATA[
+                $this->load->model('journal2/blog');
+                $is_journal2_blog = false;
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[$key == 'path']]></search>
+            <add position="before"><![CDATA[
+                } elseif ($key == 'journal_blog_post_id') {
+                    $is_journal2_blog = true;
+                    if ($journal_blog_keyword = $this->model_journal2_blog->rewritePost($value)) {
+                        $url .= '/' . $journal_blog_keyword;
+                        unset($data[$key]);
+                    }
+                } elseif ($key == 'journal_blog_category_id') {
+                    $is_journal2_blog = true;
+                    if ($journal_blog_keyword = $this->model_journal2_blog->rewriteCategory($value)) {
+                        $url .= '/' . $journal_blog_keyword;
+                        unset($data[$key]);
+                    }
+                } elseif (isset($data['route']) && $data['route'] == 'journal2/blog') {
+                    if (!isset($data['journal_blog_post_id']) && !isset($data['journal_blog_category_id'])) {
+                        $is_journal2_blog = true;
+                    }
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[if ($url) {]]></search>
+            <add position="before"><![CDATA[
+            if ($is_journal2_blog && $this->model_journal2_blog->getBlogKeyword()) {
+                $url = '/' . $this->model_journal2_blog->getBlogKeyword() . $url;
+            }]]></add>
+        </operation>
+    </file>
+
+    <!--<file path="catalog/controller/startup/seo_url.php">-->
+    <!--    <operation>-->
+    <!--        <search><![CDATA[if ($query->num_rows) {]]></search>-->
+    <!--        <add position="before"><![CDATA[-->
+    <!--            if ($part && !$query->num_rows) {-->
+    <!--                $sql = "-->
+    <!--                    SELECT CONCAT('journal_blog_category_id=', category_id) as query FROM " . DB_PREFIX . "journal2_blog_category_description-->
+    <!--                    WHERE keyword = '" . $this->db->escape($part) . "'-->
+    <!--                    UNION-->
+    <!--                    SELECT CONCAT('journal_blog_post_id=', post_id) as query FROM " . DB_PREFIX . "journal2_blog_post_description-->
+    <!--                    WHERE keyword = '" . $this->db->escape($part) . "'-->
+    <!--                ";-->
+    <!--                $query = $this->db->query($sql);-->
+    <!--            }-->
+
+    <!--            if (!$query->num_rows) {-->
+    <!--                $this->load->model('journal2/blog');-->
+    <!--                $journal_blog_keywords = $this->model_journal2_blog->getBlogKeywords();-->
+
+    <!--                if($part && is_array($journal_blog_keywords) && (in_array($part, $journal_blog_keywords))) {-->
+    <!--                    $this->request->get['route'] = 'journal2/blog';-->
+    <!--                    continue;-->
+    <!--                }-->
+    <!--            }-->
+    <!--        ]]></add>-->
+    <!--    </operation>-->
+
+    <!--    <operation>-->
+    <!--        <search><![CDATA[if ($url[0] == 'product_id') {]]></search>-->
+    <!--        <add position="before"><![CDATA[-->
+    <!--                if ($url[0] == 'journal_blog_post_id') {-->
+    <!--                    $this->request->get['journal_blog_post_id'] = $url[1];-->
+    <!--                }-->
+
+    <!--                if ($url[0] == 'journal_blog_category_id') {-->
+    <!--                    $this->request->get['journal_blog_category_id'] = $url[1];-->
+    <!--                }-->
+    <!--        ]]></add>-->
+    <!--    </operation>-->
+
+    <!--    <operation>-->
+    <!--        <search><![CDATA[if (!isset($this->request->get['route'])) {]]></search>-->
+    <!--        <add position="before"><![CDATA[-->
+    <!--                if (isset($this->request->get['journal_blog_post_id'])) {-->
+    <!--                    $this->request->get['route'] = 'journal2/blog/post';-->
+			 <!--       } else if (isset($this->request->get['journal_blog_category_id'])) {-->
+    <!--                    $this->request->get['route'] = 'journal2/blog';-->
+    <!--                }-->
+    <!--        ]]></add>-->
+    <!--    </operation>-->
+
+    <!--    <operation>-->
+    <!--        <search><![CDATA[public function rewrite($link) {]]></search>-->
+    <!--        <add position="after"><![CDATA[-->
+    <!--            $this->load->model('journal2/blog');-->
+    <!--            $is_journal2_blog = false;-->
+    <!--        ]]></add>-->
+    <!--    </operation>-->
+
+    <!--    <operation>-->
+    <!--        <search><![CDATA[$key == 'path']]></search>-->
+    <!--        <add position="before"><![CDATA[-->
+    <!--            } elseif ($key == 'journal_blog_post_id') {-->
+    <!--                $is_journal2_blog = true;-->
+    <!--                if ($journal_blog_keyword = $this->model_journal2_blog->rewritePost($value)) {-->
+    <!--                    $url .= '/' . $journal_blog_keyword;-->
+    <!--                    unset($data[$key]);-->
+    <!--                }-->
+    <!--            } elseif ($key == 'journal_blog_category_id') {-->
+    <!--                $is_journal2_blog = true;-->
+    <!--                if ($journal_blog_keyword = $this->model_journal2_blog->rewriteCategory($value)) {-->
+    <!--                    $url .= '/' . $journal_blog_keyword;-->
+    <!--                    unset($data[$key]);-->
+    <!--                }-->
+    <!--            } elseif (isset($data['route']) && $data['route'] == 'journal2/blog') {-->
+    <!--                if (!isset($data['journal_blog_post_id']) && !isset($data['journal_blog_category_id'])) {-->
+    <!--                    $is_journal2_blog = true;-->
+    <!--                }-->
+    <!--        ]]></add>-->
+    <!--    </operation>-->
+
+    <!--    <operation>-->
+    <!--        <search><![CDATA[if ($url) {]]></search>-->
+    <!--        <add position="before"><![CDATA[-->
+    <!--        if ($is_journal2_blog && $this->model_journal2_blog->getBlogKeyword()) {-->
+    <!--            $url = '/' . $this->model_journal2_blog->getBlogKeyword() . $url;-->
+    <!--        }]]></add>-->
+    <!--    </operation>-->
+    <!--</file>-->
+
+    <file path="catalog/controller/common/column_left.php">
+        <operation>
+            <search><![CDATA[$layout_id = 0;]]></search>
+            <add  position="after"><![CDATA[
+                $this->load->model('journal2/blog');
+
+                if ($route == 'journal2/blog' && isset($this->request->get['journal_blog_category_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogCategoryLayoutId($this->request->get['journal_blog_category_id']);
+		        }
+
+		        if ($route == 'journal2/blog/post' && isset($this->request->get['journal_blog_post_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogPostLayoutId($this->request->get['journal_blog_post_id']);
+		        }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/column_right.php">
+        <operation>
+            <search><![CDATA[$layout_id = 0;]]></search>
+            <add  position="after"><![CDATA[
+                $this->load->model('journal2/blog');
+
+                if ($route == 'journal2/blog' && isset($this->request->get['journal_blog_category_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogCategoryLayoutId($this->request->get['journal_blog_category_id']);
+		        }
+
+		        if ($route == 'journal2/blog/post' && isset($this->request->get['journal_blog_post_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogPostLayoutId($this->request->get['journal_blog_post_id']);
+		        }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/content_top.php">
+        <operation>
+            <search><![CDATA[$layout_id = 0;]]></search>
+            <add  position="after"><![CDATA[
+                $this->load->model('journal2/blog');
+
+                if ($route == 'journal2/blog' && isset($this->request->get['journal_blog_category_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogCategoryLayoutId($this->request->get['journal_blog_category_id']);
+		        }
+
+		        if ($route == 'journal2/blog/post' && isset($this->request->get['journal_blog_post_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogPostLayoutId($this->request->get['journal_blog_post_id']);
+		        }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/common/content_bottom.php">
+        <operation>
+            <search><![CDATA[$layout_id = 0;]]></search>
+            <add  position="after"><![CDATA[
+                $this->load->model('journal2/blog');
+
+                if ($route == 'journal2/blog' && isset($this->request->get['journal_blog_category_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogCategoryLayoutId($this->request->get['journal_blog_category_id']);
+		        }
+
+		        if ($route == 'journal2/blog/post' && isset($this->request->get['journal_blog_post_id'])) {
+			        $layout_id = $this->model_journal2_blog->getBlogPostLayoutId($this->request->get['journal_blog_post_id']);
+		        }
+            ]]></add>
+        </operation>
+    </file>
+
+    <!--
+
+        Imagemanager fix
+
+    -->
+
+    <file path="admin/controller/common/filemanager.php">
+        <operation>
+            <search><![CDATA[. 'catalog]]></search>
+            <add position="replace"><![CDATA[. ']]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$name = str_split(basename($image), 14);]]></search>
+            <add position="before"><![CDATA[
+            // Ignore cache, flags and templates directories
+			if (strpos($image, DIR_IMAGE . '/cache') === 0 || strpos($image, DIR_IMAGE . '/flags') === 0 || strpos($image, DIR_IMAGE . '/templates') === 0 || strpos($image, DIR_IMAGE . '/payment') === 0) {
+				continue;
+			}
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[} elseif (is_file($image)) {]]></search>
+            <add position="after"><![CDATA[
+                $start_slash = strpos($image, '//') === 0;
+
+                $image = trim($image, '/');
+
+                if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                    $image = str_replace('//', '/', $image);
+
+                }
+
+                if ($start_slash) {
+                    $image = '//' . $image;
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[realpath($directory . '/' . $filter_name))]]></search>
+            <add position="replace"><![CDATA[realpath($directory . '/' . $filter_name)) . '/']]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/common/filemanager.php">
+        <operation>
+            <search><![CDATA[$pagination = new Pagination();]]></search>
+            <add position="before"><![CDATA[
+                $data['is_ajax'] = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+				$data['ckeditor'] = isset($_GET['CKEditorFuncNum']) ? $_GET['CKEditorFuncNum'] : null;
+				$data['imgpath'] = HTTP_CATALOG . 'image/';
+				$data['base'] = $_SERVER['HTTPS'] ? HTTPS_SERVER : HTTP_SERVER;
+				$data['params'] = http_build_query(array(
+					'CKEditor' 			=> isset($_GET['CKEditor']) ? $_GET['CKEditor'] : null,
+					'CKEditorFuncNum' 	=> isset($_GET['CKEditorFuncNum']) ? $_GET['CKEditor'] : null,
+					'langCode'			=> isset($_GET['langCode']) ? $_GET['langCode'] : null
+				));
+            ]]></add>
+
+        </operation>
+    </file>
+
+    <file path="admin/view/template/common/filemanager.tpl">
+        <operation>
+            <search><![CDATA[class="modal-dialog modal-lg"]]></search>
+            <add position="before"><![CDATA[
+            <?php
+				$is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+				$ckeditor = isset($_GET['CKEditorFuncNum']) ? $_GET['CKEditorFuncNum'] : null;
+				$imgpath = HTTP_CATALOG . 'image/';
+				$base = $_SERVER['HTTPS'] ? HTTPS_SERVER : HTTP_SERVER;
+				$params = http_build_query(array(
+					'CKEditor' 			=> isset($_GET['CKEditor']) ? $_GET['CKEditor'] : null,
+					'CKEditorFuncNum' 	=> isset($_GET['CKEditorFuncNum']) ? $_GET['CKEditor'] : null,
+					'langCode'			=> isset($_GET['langCode']) ? $_GET['langCode'] : null
+				));
+			?>
+            <?php if (!$is_ajax): ?>
+            <!DOCTYPE html>
+            <html dir="ltr" lang="en">
+            <head>
+                <meta charset="UTF-8" />
+                <title>Image Manager</title>
+                <base href="<?php echo $base; ?>" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+                <script type="text/javascript" src="view/javascript/jquery/jquery-2.1.1.min.js"></script>
+                <script type="text/javascript" src="view/javascript/bootstrap/js/bootstrap.min.js"></script>
+                <link href="view/javascript/bootstrap/css/bootstrap.css" rel="stylesheet" />
+                <link href="view/javascript/font-awesome/css/font-awesome.min.css" type="text/css" rel="stylesheet" />
+                <link type="text/css" href="view/stylesheet/stylesheet.css" rel="stylesheet" media="screen" />
+                <script src="view/javascript/common.js" type="text/javascript"></script>
+                <?php if ($ckeditor): ?>
+                <script>
+                var ckeditor = <?php echo $ckeditor; ?>;
+                var imgpath = '<?php echo $imgpath; ?>';
+				var ckparams = '&<?php echo $params; ?>';
+                </script>
+                <?php endif; ?>
+                <style>
+                #modal-image .modal-dialog{
+                    width:100%;
+                    margin: 0 auto;
+                }
+                .modal-header .close{
+                display:none;
+                }
+                </style>
+            </head>
+            <body>
+            <div id="modal-image">
+            <?php endif; ?>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$('a.directory').on('click', function(e) {]]></search>
+            <add position="before"><![CDATA[
+            if (typeof (ckeditor) !== 'undefined') {
+                $('a.thumbnail').off('click').on('click', function(e) {
+                    e.preventDefault();
+
+                    window.opener.CKEDITOR.tools.callFunction(ckeditor, imgpath + $(this).parent().find('input').attr('value'));
+
+                    self.close();
+                });
+            }
+            ]]></add>
+        </operation>
+        <operation>
+            <search index="1"><![CDATA[//--></script>]]></search>
+            <add position="after"><![CDATA[
+            <?php if (!$is_ajax): ?>
+                </div>
+            </body>
+            </html>
+            <?php endif; ?>
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[<?php } else { ?>]]></search>
+            <add position="replace"><![CDATA[<?php } else if (!$ckeditor) { ?>]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[$('#modal-image').load($(this).attr('href'));]]></search>
+            <add position="replace"><![CDATA[$('#modal-image').load($(this).attr('href') + (typeof (ckeditor) !== 'undefined' ? ckparams : ''));]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/common/filemanager.twig">
+        <operation>
+            <search><![CDATA[class="modal-dialog modal-lg"]]></search>
+            <add position="before"><![CDATA[
+            {% if not is_ajax %}
+            <!DOCTYPE html>
+            <html dir="ltr" lang="en">
+            <head>
+                <meta charset="UTF-8" />
+                <title>Image Manager</title>
+                <base href="{{ base }}" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+                <script type="text/javascript" src="view/javascript/jquery/jquery-2.1.1.min.js"></script>
+                <script type="text/javascript" src="view/javascript/bootstrap/js/bootstrap.min.js"></script>
+                <link href="view/javascript/bootstrap/css/bootstrap.css" rel="stylesheet" />
+                <link href="view/javascript/font-awesome/css/font-awesome.min.css" type="text/css" rel="stylesheet" />
+                <link type="text/css" href="view/stylesheet/stylesheet.css" rel="stylesheet" media="screen" />
+                <script src="view/javascript/common.js" type="text/javascript"></script>
+                {% if ckeditor %}
+                <script>
+                var ckeditor = {{ ckeditor }};
+                var imgpath = '{{ imgpath }}';
+				var ckparams = '&{{ params }}';
+                </script>
+                {% endif %}
+                <style>
+                #modal-image .modal-dialog{
+                    width:100%;
+                    margin: 0 auto;
+                }
+                .modal-header .close{
+                display:none;
+                }
+                </style>
+            </head>
+            <body>
+            <div id="modal-image">
+            {% endif %}
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$('a.directory').on('click', function(e) {]]></search>
+            <add position="before"><![CDATA[
+            if (typeof (ckeditor) !== 'undefined') {
+                $('a.thumbnail').off('click').on('click', function(e) {
+                    e.preventDefault();
+
+                    window.opener.CKEDITOR.tools.callFunction(ckeditor, imgpath + $(this).parent().find('input').attr('value'));
+
+                    self.close();
+                });
+            }
+            ]]></add>
+        </operation>
+        <operation>
+            <search index="1"><![CDATA[//--></script>]]></search>
+            <add position="after"><![CDATA[
+            {% if not is_ajax %}
+                </div>
+            </body>
+            </html>
+            {% endif %}
+            ]]></add>
+        </operation>
+
+        <operation>
+            <search><![CDATA[$('#modal-image').load($(this).attr('href'));]]></search>
+            <add position="replace"><![CDATA[$('#modal-image').load($(this).attr('href') + (typeof (ckeditor) !== 'undefined' ? ckparams : ''));]]></add>
+        </operation>
+    </file>
+
+    <!-- journal checkout -->
+    <file path="catalog/controller/checkout/checkout.php">
+        <operation>
+            <search><![CDATA[$data['breadcrumbs'] = array();]]></search>
+            <add position="before"><![CDATA[
+                if (strpos($this->config->get('config_template'), 'journal2') === 0 && $this->journal2->settings->get('journal_checkout')) {
+                    return new Action('journal2/checkout');
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- clear cache when currency rates are updated -->
+    <file path="admin/model/localisation/currency.php">
+        <operation>
+            <search><![CDATA[$this->db->query("UPDATE " . DB_PREFIX . "currency SET value = '1.00000', date_modified = '" .  $this->db->escape(date('Y-m-d H:i:s')) . "' WHERE code = '" . $this->db->escape($this->config->get('config_currency')) . "'");]]></search>
+            <add position="after"><![CDATA[
+                if (defined('JOURNAL_FLUSH_CURRENCY_CACHE')) {
+                    require_once(DIR_SYSTEM . 'journal2/classes/journal2_cache.php');
+                    Journal2Cache::deleteCache();
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- oc 21 compatibility -->
+    <file path="catalog/controller/common/maintenance.php">
+        <operation>
+            <search><![CDATA[if (($route != 'payment' && $route != 'api') && !$this->user->isLogged()) {]]></search>
+            <add position="replace"><![CDATA[
+                $is_j2_assets = isset($this->request->get['route']) && strpos($this->request->get['route'], 'journal2/assets') === 0;
+
+                if (($route != 'payment' && $route != 'api' && !$is_j2_assets) && !$this->user->isLogged()) {
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- oc22 compatibility -->
+    <file path="catalog/controller/startup/startup.php">
+        <operation>
+            <search><![CDATA[foreach ($query->rows as $result) {]]></search>
+            <add position="after" offset="5"><![CDATA[
+                if (strpos($result['key'], 'theme_default_image_') === 0) {
+				    $this->config->set(str_replace('theme_default_image_', 'config_image_', $result['key']), $result['value']);
+			    }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/startup/maintenance.php">
+        <operation>
+            <search><![CDATA[if (($route != 'payment' && $route != 'api') && !$this->user->isLogged()) {]]></search>
+            <add position="replace"><![CDATA[
+                $is_j2_assets = isset($this->request->get['route']) && strpos($this->request->get['route'], 'journal2/assets') === 0;
+
+                if (($route != 'payment' && $route != 'api' && !$is_j2_assets) && !$this->user->isLogged()) {
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/startup/maintenance.php">
+        <operation>
+            <search><![CDATA[if ((substr($route, 0, 7) != 'payment' && substr($route, 0, 3) != 'api') && !in_array($route, $ignore) && !$this->user->isLogged()) {]]></search>
+            <add position="replace"><![CDATA[
+                $is_j2_assets = isset($this->request->get['route']) && strpos($this->request->get['route'], 'journal2/assets') === 0;
+
+                if ((substr($route, 0, 7) != 'payment' && substr($route, 0, 3) != 'api' && !$is_j2_assets) && !in_array($route, $ignore) && !$this->user->isLogged()) {
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="catalog/controller/startup/maintenance.php">
+        <operation>
+            <search><![CDATA[if ((substr($route, 0, 17) != 'extension/payment' && substr($route, 0, 3) != 'api') && !in_array($route, $ignore) && !$this->user->isLogged()) {]]></search>
+            <add position="replace"><![CDATA[
+                $is_j2_assets = isset($this->request->get['route']) && strpos($this->request->get['route'], 'journal2/assets') === 0;
+
+                if ((substr($route, 0, 17) != 'extension/payment' && substr($route, 0, 3) != 'api') && !in_array($route, $ignore) && !$this->user->isLogged() && !$is_j2_assets) {
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- development env -->
+
+    <file path="catalog/controller/event/theme.php">
+        <operation>
+            <search><![CDATA[$this->config->get('theme_default_directory');]]></search>
+            <add position="after"><![CDATA[
+                if (defined('J2SERVER') || (defined('J2ENV') && $theme === 'journal2')) {
+                    $theme = version_compare(VERSION, '3', '>=') ? 'journal2_oc3' : 'journal2_oc2';
+                }
+            ]]></add>
+        </operation>
+    </file>
+
+    <!-- oc23 compatibility -->
+    <file path="system/library/template.php">
+        <operation>
+            <search><![CDATA[$this->adaptor = new $class();]]></search>
+            <add position="after"><![CDATA[
+                global $journal2, $config, $registry;
+			    $this->adaptor->journal2 = $journal2;
+			    $this->adaptor->url = $registry->get('url');
+			    $this->adaptor->config = $config;
+
+			    if (version_compare(VERSION, '3', '>=')) {
+			        $this->adaptor->set('journal2', $journal2);
+			        $this->adaptor->set('url', $registry->get('url'));
+			        $this->adaptor->set('config', $config);
+			    }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/extension/extension/module.php">
+        <operation>
+            <search><![CDATA[$this->load->controller('extension/module/' . $this->request->get['extension'] . '/install');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->controller('module/' . $this->request->get['extension'] . '/install');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[$this->load->controller('extension/module/' . $this->request->get['extension'] . '/uninstall');]]></search>
+            <add position="after"><![CDATA[
+                $this->load->controller('module/' . $this->request->get['extension'] . '/uninstall');
+            ]]></add>
+        </operation>
+    </file>
+
+</modification>

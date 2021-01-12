@@ -1,0 +1,13 @@
+<script type="text/javascript" nitro-exclude>
+(_ => {
+    if (document.cookie.indexOf('nitropack_cache_hit=1') == -1) {
+        var beaconData = new FormData();
+
+        beaconData.append('nitropack_beacon_url', '{url}');
+        beaconData.append('nitropack_beacon_cookies', '{cookies}');
+        beaconData.append('nitropack_beacon_signature', '{signature}');
+
+        navigator.sendBeacon(location.href, beaconData);
+    }
+})();
+</script>

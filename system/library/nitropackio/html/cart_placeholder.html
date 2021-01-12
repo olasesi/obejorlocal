@@ -1,0 +1,46 @@
+<script nitro-exclude type="text/javascript">
+(_ => {
+    var cartOverride = (element, key) => {
+        if ({isPageCacheable}) {
+            var storedCartHtml = localStorage.getItem(key);
+
+            if (storedCartHtml) {
+                element.innerHTML = storedCartHtml;
+            }
+        } else {
+            localStorage.setItem(key, element.innerHTML);
+        }
+
+        const observer = new MutationObserver(function(mutationsList, observer) {
+            localStorage.setItem(key, element.innerHTML);
+        });
+
+        observer.observe(element, {
+            attributes: true,
+            childList: true,
+            subtree: true
+        });
+    };
+
+    if (typeof localStorage === 'undefined') return;
+
+    // Find the previous element of type DIV
+    var element = document.currentScript.previousElementSibling;
+
+    while (element.tagName != "DIV" && element != null) {
+        element = element.previousElementSibling;
+    }
+
+    // Element found, use cartOverride
+    if (element != null) {
+        cartOverride(element, 'nitroCart');
+    }
+
+    // Journal compatibility
+    var journalCartElement = document.querySelector("body > .mobile-container.mobile-cart-content-container");
+
+    if (journalCartElement != null) {
+        cartOverride(journalCartElement, 'nitroJournalCartSideMenu');
+    }
+})();
+</script>

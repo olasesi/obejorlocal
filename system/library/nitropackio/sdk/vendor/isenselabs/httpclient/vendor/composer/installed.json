@@ -1,0 +1,32 @@
+[
+    {
+        "name": "isenselabs/url",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
+        "source": {
+            "type": "git",
+            "url": "git@bitbucket.org:isenselabs/url.git",
+            "reference": "4c6cc0401529a8e676b8ede6bb8eafe710f6dc11"
+        },
+        "time": "2020-01-09T16:05:55+00:00",
+        "type": "library",
+        "installation-source": "source",
+        "autoload": {
+            "psr-4": {
+                "NitroPack\\": "src/"
+            }
+        },
+        "authors": [
+            {
+                "name": "Ivailo Hristov"
+            }
+        ],
+        "description": "URL manipulation library",
+        "keywords": [
+            "library",
+            "manipulation",
+            "php",
+            "url"
+        ]
+    }
+]

@@ -1,0 +1,18 @@
+[29-Sep-2020 15:25:12 UTC] PHP Notice:  Use of undefined constant DIR_STORAGE - assumed 'DIR_STORAGE' in /home/obejorng/public_html/system/startup.php on line 73
+[29-Sep-2020 16:25:13 Africa/Lagos] PHP Fatal error:  Class 'Scssc' not found in /home/obejorng/public_html/catalog/controller/startup/sass.php on line 9
+[21-Nov-2020 03:12:29 UTC] PHP Fatal error:  Uncaught exception 'Exception' with message 'Error: <br />Error No: ' in /home/obejorng/public_html/system/library/db/mysqli.php:10
+Stack trace:
+#0 /home/obejorng/public_html/system/library/db.php(31): DB\MySQLi->__construct('localhost', 'obejorng_obejor', '#obejor##19', 'obejorng_store', '3306')
+#1 /home/obejorng/public_html/system/framework.php(482): DB->__construct('mysqli', 'localhost', 'obejorng_obejor', '#obejor##19', 'obejorng_store', '3306')
+#2 /home/obejorng/public_html/system/startup.php(107): require_once('/home/obejorng/...')
+#3 /home/obejorng/public_html/admin/index.php(19): start('admin')
+#4 {main}
+  thrown in /home/obejorng/public_html/system/library/db/mysqli.php on line 10
+[21-Nov-2020 03:13:00 UTC] PHP Fatal error:  Uncaught exception 'Exception' with message 'Error: <br />Error No: ' in /home/obejorng/public_html/system/library/db/mysqli.php:10
+Stack trace:
+#0 /home/obejorng/public_html/system/library/db.php(31): DB\MySQLi->__construct('localhost', 'obejorng_obejor', '#obejor##19', 'obejorng_store', '3306')
+#1 /home/obejorng/public_html/system/framework.php(482): DB->__construct('mysqli', 'localhost', 'obejorng_obejor', '#obejor##19', 'obejorng_store', '3306')
+#2 /home/obejorng/public_html/system/startup.php(107): require_once('/home/obejorng/...')
+#3 /home/obejorng/public_html/admin/index.php(19): start('admin')
+#4 {main}
+  thrown in /home/obejorng/public_html/system/library/db/mysqli.php on line 10

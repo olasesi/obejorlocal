@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<modification>
+  <name>Default timezone for PHP and Database</name>
+  <code>timezone</code>
+  <version></version>
+  <author>Tri Le</author>
+  <link>http://tlecode.com</link>
+
+  <file path="system/library/db.php">
+    <operation>
+      <search regex="true"><![CDATA[~(.*this->)(.*)(->query.*)~]]></search>
+      <add position="replace"><![CDATA[
+//tri mod start
+$query = $this->$2->query("SELECT * FROM " . DB_PREFIX . "setting WHERE `code` = 'module_timezone'");
+
+if ($query->num_rows) {
+  $status = $timezone = 0;
+
+  foreach ($query->rows as $row) {
+    if ($row['key'] == 'module_timezone_timezone') $timezone = $row['value'];
+    if ($row['key'] == 'module_timezone_status') $status = $row['value'];
+  }
+
+  if ($status && $timezone) {
+    date_default_timezone_set($timezone);
+
+    $now = new DateTime();
+    $mins = $now->getOffset() / 60;
+    $sgn = ($mins < 0 ? -1 : 1);
+    $mins = abs($mins);
+    $hrs = floor($mins / 60);
+    $mins -= $hrs * 60;
+    $offset = sprintf('%+d:%02d', $hrs * $sgn, $mins);
+    $this->$2->query("SET time_zone = '" . $offset . "'");
+  }
+}
+//tri mod end
+$1$2$3
+      ]]></add>
+    </operation>
+  </file>
+</modification>
